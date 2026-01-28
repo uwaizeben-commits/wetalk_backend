@@ -24,6 +24,7 @@ app.use((req, res, next) => {
 // In-memory user store (replace with MongoDB later)
 const users = [];
 const otps = {}; // Store OTPs by phone number: { phone: code }
+const stories = []; // Store stories: { id, userId, username, type, url, timestamp }
 
 const server = http.createServer(app);
 
@@ -177,6 +178,50 @@ app.post('/recovery/reset-password', (req, res) => {
     }
 
     res.status(400).json({ message: 'Session expired or invalid' });
+});
+
+// Stories (Status) Routes
+app.post('/stories', (req, res) => {
+    const { userId, username, type, url } = req.body;
+    if (!userId || !type || !url) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const newStory = {
+        id: Date.now(),
+        userId,
+        username,
+        type, // 'image' or 'video'
+        url,
+        timestamp: new Date().toISOString()
+    };
+
+    stories.push(newStory);
+    console.log(`[STORY] New ${type} status from ${username}`);
+    res.status(201).json(newStory);
+});
+
+app.get('/stories', (req, res) => {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Filter active stories
+    const activeStories = stories.filter(s => new Date(s.timestamp) > twentyFourHoursAgo);
+
+    // Group by user for easy rendering
+    const groupedStories = activeStories.reduce((acc, story) => {
+        if (!acc[story.userId]) {
+            acc[story.userId] = {
+                userId: story.userId,
+                username: story.username,
+                avatar: story.username.substring(0, 2).toUpperCase(),
+                items: []
+            };
+        }
+        acc[story.userId].items.push(story);
+        return acc;
+    }, {});
+
+    res.json(Object.values(groupedStories));
 });
 
 io.on('connection', (socket) => {
