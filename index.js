@@ -451,9 +451,12 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+// Ensure PORT is a number (guard against accidental string envs like a URL)
+const parsedPort = parseInt(process.env.PORT, 10);
+const PORT = Number.isInteger(parsedPort) ? parsedPort : 3001;
+const HOST = process.env.HOST || '0.0.0.0';
+server.listen(PORT, HOST, () => {
+    console.log(`Server is running on http://${HOST}:${PORT}`);
 });
 
 
